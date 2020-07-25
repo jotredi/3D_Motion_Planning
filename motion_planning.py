@@ -5,8 +5,11 @@ from enum import Enum, auto
 
 import numpy as np
 import csv
+import networkx as nx
+import numpy.linalg as LA
 
 from planning_utils import a_star, heuristic, create_grid, prune_path
+from planning_utils import create_grid_and_edges, graph_a_star
 from udacidrone import Drone
 from udacidrone.connection import MavlinkConnection
 from udacidrone.messaging import MsgID
@@ -118,7 +121,7 @@ class MotionPlanning(Drone):
     def plan_path(self):
         self.flight_state = States.PLANNING
         print("Searching for a path ...")
-        TARGET_ALTITUDE = 20
+        TARGET_ALTITUDE = 10
         SAFETY_DISTANCE = 5
 
         self.target_position[2] = TARGET_ALTITUDE
@@ -146,7 +149,9 @@ class MotionPlanning(Drone):
         data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
 
         # Define a grid for a particular altitude and safety margin around obstacles
-        grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+        #grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+        grid, edges, north_offset, east_offset = create_grid_and_edges(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+
         print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
         # Define starting point on the grid (this is just grid center)
         grid_start = (int(local_pos[0]-north_offset), int(local_pos[1]-east_offset))
@@ -157,17 +162,39 @@ class MotionPlanning(Drone):
         grid_goal = (int(goal[0]-north_offset), int(goal[1]-east_offset))
         # TODO: adapt to set goal as latitude / longitude position and convert
 
+        # Create graph with the Voronoi edges returned by 'create_grid_and_edges()':
+        G = nx.Graph()
+        for e in edges:
+            p1 = e[0]
+            p2 = e[1]
+            # Set the edge weights to the Euclidean distance between the points
+            dist = LA.norm(np.array(p2) - np.array(p1))
+            G.add_edge(p1, p2, weight=dist)
+
         # Run A* to find a path from start to goal
         # TODO: add diagonal motions with a cost of sqrt(2) to your A* implementation
         # or move to a different search space such as a graph (not done here)
+
+        # Find closest point in the graph to our current location
+        graph_start = tuple(list(G.nodes())[np.argmin(list(map(lambda p: LA.norm(p-grid_start), np.array(list(G.nodes())))))])
+        graph_goal = tuple(list(G.nodes())[np.argmin(list(map(lambda p: LA.norm(p-grid_goal), np.array(list(G.nodes())))))])
+
         print('Local Start and Goal: ', grid_start, grid_goal)
-        path, _ = a_star(grid, heuristic, grid_start, grid_goal)
+        print('Graph Start and Goal: ', graph_start, graph_goal)
+
+        #path, _ = a_star(grid, heuristic, grid_start, grid_goal)
+        path, _ = graph_a_star(G, heuristic, graph_start, graph_goal)
+        # Insert start and goal grid positions
+        path.insert(0, grid_start)
+        path.append(grid_goal)
         # TODO: prune path to minimize number of waypoints
-        path = prune_path(path)
+        #path = prune_path(path)
         # TODO (if you're feeling ambitious): Try a different approach altogether!
+        print("Path: ", path)
 
         # Convert path to waypoints
-        waypoints = [[p[0] + north_offset, p[1] + east_offset, TARGET_ALTITUDE, 0] for p in path]
+        waypoints = [[int(p[0]) + north_offset, int(p[1]) + east_offset, TARGET_ALTITUDE, 0] for p in path]
+        print("Waypoints: ", waypoints)
         # Set self.waypoints
         self.waypoints = waypoints
         # TODO: send waypoints to sim (this is just for visualization of waypoints)
@@ -192,7 +219,7 @@ if __name__ == "__main__":
     parser.add_argument('--host', type=str, default='127.0.0.1', help="host address, i.e. '127.0.0.1'")
     args = parser.parse_args()
 
-    conn = MavlinkConnection('tcp:{0}:{1}'.format(args.host, args.port), timeout=60)
+    conn = MavlinkConnection('tcp:{0}:{1}'.format(args.host, args.port), timeout=120)
     drone = MotionPlanning(conn)
     time.sleep(1)
 
