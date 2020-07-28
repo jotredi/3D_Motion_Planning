@@ -5,11 +5,14 @@ from enum import Enum, auto
 
 import numpy as np
 import csv
-import networkx as nx
+import random
 import numpy.linalg as LA
+
+import pickle as pkl
 
 from planning_utils import a_star, heuristic, create_grid, prune_path
 from planning_utils import create_grid_and_edges, graph_a_star
+from planning_utils import prob_roadmap
 from udacidrone import Drone
 from udacidrone.connection import MavlinkConnection
 from udacidrone.messaging import MsgID
@@ -61,9 +64,10 @@ class MotionPlanning(Drone):
 
     def velocity_callback(self):
         if self.flight_state == States.LANDING:
-            if self.global_position[2] - self.global_home[2] < 0.1:
-                if abs(self.local_position[2]) < 0.01:
-                    self.disarming_transition()
+            # Transition to disarming if it has stop moving
+            # this considers landing on top of a building
+            if self.local_velocity[2] < 0.01:
+                self.disarming_transition()
 
     def state_callback(self):
         if self.in_mission:
@@ -121,7 +125,7 @@ class MotionPlanning(Drone):
     def plan_path(self):
         self.flight_state = States.PLANNING
         print("Searching for a path ...")
-        TARGET_ALTITUDE = 10
+        TARGET_ALTITUDE = 20
         SAFETY_DISTANCE = 5
 
         self.target_position[2] = TARGET_ALTITUDE
@@ -149,27 +153,29 @@ class MotionPlanning(Drone):
         data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
 
         # Define a grid for a particular altitude and safety margin around obstacles
-        #grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
-        grid, edges, north_offset, east_offset = create_grid_and_edges(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+        grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+        #grid, edges, north_offset, east_offset = create_grid_and_edges(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
 
         print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
         # Define starting point on the grid (this is just grid center)
-        grid_start = (int(local_pos[0]-north_offset), int(local_pos[1]-east_offset))
+        grid_start = (int(local_pos[0]-north_offset), int(local_pos[1]-east_offset), TARGET_ALTITUDE)
         # TODO: convert start position to current position rather than map center
 
         # Set goal as some arbitrary position on the grid
-        goal = global_to_local((-122.396585, 37.793520, TARGET_ALTITUDE), self.global_home)
-        grid_goal = (int(goal[0]-north_offset), int(goal[1]-east_offset))
+        while True:
+            n_goal = random.randint(0,grid.shape[0])
+            e_goal = random.randint(0,grid.shape[1])
+            if grid[n_goal, e_goal] == 0:
+                break
+        #goal = global_to_local((-122.396585, 37.793520, TARGET_ALTITUDE), self.global_home)
+        #grid_goal = (int(goal[0]-north_offset), int(goal[1]-east_offset))
+        grid_goal = (n_goal, e_goal, TARGET_ALTITUDE)
         # TODO: adapt to set goal as latitude / longitude position and convert
 
-        # Create graph with the Voronoi edges returned by 'create_grid_and_edges()':
-        G = nx.Graph()
-        for e in edges:
-            p1 = e[0]
-            p2 = e[1]
-            # Set the edge weights to the Euclidean distance between the points
-            dist = LA.norm(np.array(p2) - np.array(p1))
-            G.add_edge(p1, p2, weight=dist)
+        # Create probabilistic roadmap
+        num_samples = 500
+        z_max = TARGET_ALTITUDE
+        G = prob_roadmap(data, num_samples, z_max)
 
         # Run A* to find a path from start to goal
         # TODO: add diagonal motions with a cost of sqrt(2) to your A* implementation
@@ -182,16 +188,17 @@ class MotionPlanning(Drone):
         print('Local Start and Goal: ', grid_start, grid_goal)
         print('Graph Start and Goal: ', graph_start, graph_goal)
 
+        # Grid Search
         #path, _ = a_star(grid, heuristic, grid_start, grid_goal)
+        # Graph Search
         path, _ = graph_a_star(G, heuristic, graph_start, graph_goal)
-        # Insert start and goal grid positions
-        path.insert(0, grid_start)
-        path.append(grid_goal)
+        # Append goal grid position to the path
+        #path.append(grid_goal)
+
         # TODO: prune path to minimize number of waypoints
-        #path = prune_path(path)
+        path = prune_path(path)
         # TODO (if you're feeling ambitious): Try a different approach altogether!
         print("Path: ", path)
-
         # Convert path to waypoints
         waypoints = [[int(p[0]) + north_offset, int(p[1]) + east_offset, TARGET_ALTITUDE, 0] for p in path]
         print("Waypoints: ", waypoints)
