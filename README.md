@@ -85,7 +85,7 @@ It assigns an artificial potential field to every point in the world using poten
 <img src="./misc/potential_field.jpeg" >
 
 
-The robot will go from the highest potential to the lowest potential so the goal node should have the lowest potential while the starting node should have the maximum potential.
+The robot will go from the highest potential to the lowest potential so the goal node should have the lowest potential while the starting node will have the maximum potential.
 
 We can create a potential field by combining attractive and repulsive forces.
 
@@ -105,10 +105,14 @@ The repulsive potential is only computed when d(x - x_obs) < Qmax. That is, when
 * *x_obs* is the obstacle location.
 * *d(...)* is the distance metric.
 
+Here's an example of a potential field generated in a local portion of the map:
+
+<img src="./misc/field.png" >
+
 ## Implementation
 
 Every presented algorithm has its advantages and disadvantages but usually accuracy and time complexity are the main ones and we should find a trade off between them to be able to perform motion planning in real time and react to uncertainties like new obstacles or other flying objects/vehicles.
 
 Ideally, we would like to have a global path to follow that could be represented as a graph or a low resolution grid, and then maintain a local high resolution map to be able to replan over the global trajectory and avoid obstacles.
 
-This local planner could be a high resolution 3D grid where the goal is the cell that is nearest to the next waypoint or a potential field centered on the vehicle.
+This local planner could be a high resolution 3D grid centered on the vehicle where the goal is the cell that is nearest to the next waypoint or a potential field centered on the next waypoint.
