@@ -82,7 +82,7 @@ The [Potential Field algorithm](https://medium.com/@rymshasiddiqui/path-planning
 
 It assigns an artificial potential field to every point in the world using potential field functions.
 
-<img src="./misc/potential_field.jpeg" >
+<img src="./misc/potential_field.jpeg" height=300>
 
 
 The robot will go from the highest potential to the lowest potential so the goal node should have the lowest potential while the starting node will have the maximum potential.
@@ -95,7 +95,7 @@ We can create a potential field by combining attractive and repulsive forces.
 
 where the alpha term is a constant that controls how strong the pull of the goal is.
 
-* **Repulsive Force** is used to avoid obstacles and be calculated using the following formula:
+* **Repulsive Force** is used to avoid obstacles and can be calculated using the following formula:
 
 <img src="./misc/F_rep.png" >
 
@@ -107,7 +107,7 @@ The repulsive potential is only computed when d(x - x_obs) < Qmax. That is, when
 
 Here's an example of a potential field generated in a local portion of the map:
 
-<img src="./misc/field.png" >
+<img src="./misc/field.png" height=500>
 
 ## Implementation
 
@@ -116,3 +116,12 @@ Every presented algorithm has its advantages and disadvantages but usually accur
 Ideally, we would like to have a global path to follow that could be represented as a graph or a low resolution grid, and then maintain a local high resolution map to be able to replan over the global trajectory and avoid obstacles.
 
 This local planner could be a high resolution 3D grid centered on the vehicle where the goal is the cell that is nearest to the next waypoint or a potential field centered on the next waypoint.
+
+## Reference
+
+* https://www.udacity.com/course/flying-car-nanodegree--nd787
+* https://svn.sable.mcgill.ca/sable/courses/COMP763/oldpapers/yap-02-grid-based.pdf
+* https://en.wikipedia.org/wiki/Voronoi_diagram#:~:text=In%20mathematics%2C%20a%20Voronoi%20diagram,%2C%20sites%2C%20or%20generators
+* https://www.researchgate.net/publication/221350731_Java_Applets_for_the_Dynamic_Visualization_of_Voronoi_Diagrams
+* https://en.wikipedia.org/wiki/Rapidly-exploring_random_tree
+* https://medium.com/@rymshasiddiqui/path-planning-using-potential-field-algorithm-a30ad12bdb08#:~:text=A%20potential%20field%20is%20any,around%20in%20a%20certain%20space.
