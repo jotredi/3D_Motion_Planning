@@ -126,7 +126,7 @@ class MotionPlanning(Drone):
     def plan_path(self):
         self.flight_state = States.PLANNING
         print("Searching for a path ...")
-        TARGET_ALTITUDE = 10
+        TARGET_ALTITUDE = 20
         SAFETY_DISTANCE = 10
 
         self.target_position[2] = TARGET_ALTITUDE
@@ -197,7 +197,19 @@ class MotionPlanning(Drone):
         print("Path: ", path)
 
         # Convert path to waypoints
-        waypoints = [[p[0] * VOXMAP_RES + north_offset, p[1] * VOXMAP_RES + east_offset, p[2] * VOXMAP_RES, 0] for p in path]
+        waypoints = []
+        for i in range(len(path)):
+            p = path[i]
+            if i:
+                last_p = path[i-1]
+                # Set heading based on relative position to last wp
+                heading = np.arctan2((p[1]-last_p[1]), (p[0]-last_p[0]))
+            else:
+                heading = 0
+            # Append waypoint
+            waypoints.append([p[0] * VOXMAP_RES + north_offset, p[1] * VOXMAP_RES + east_offset, p[2] * VOXMAP_RES, heading])
+
+        #waypoints = [[p[0] * VOXMAP_RES + north_offset, p[1] * VOXMAP_RES + east_offset, p[2] * VOXMAP_RES, 0] for p in path]
         print("Waypoints: ", waypoints)
 
         # Set self.waypoints
@@ -224,7 +236,7 @@ if __name__ == "__main__":
     parser.add_argument('--host', type=str, default='127.0.0.1', help="host address, i.e. '127.0.0.1'")
     args = parser.parse_args()
 
-    conn = MavlinkConnection('tcp:{0}:{1}'.format(args.host, args.port), timeout=60)
+    conn = MavlinkConnection('tcp:{0}:{1}'.format(args.host, args.port), timeout=120)
     drone = MotionPlanning(conn)
     time.sleep(1)
 
