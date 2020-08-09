@@ -65,7 +65,7 @@ class MotionPlanning(Drone):
                 self.plan_local_path()
 
             # Deadband in terms of velocity
-            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < np.sqrt(1.5*vel):
+            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < np.sqrt(3*vel):
                 if len(self.local_waypoints):
                     self.waypoint_transition()
                 #if len(self.global_waypoints) > 0:
@@ -201,7 +201,8 @@ class MotionPlanning(Drone):
                 break
 
         #goal = global_to_local((-122.396585, 37.793520, TARGET_ALTITUDE), self.global_home)
-        voxmap_goal = (n_goal, e_goal, alt_goal)
+        #voxmap_goal = (n_goal, e_goal, alt_goal)
+        voxmap_goal = (90, 55, 2)
 
         # Run A* to find a path from start to goal
 
