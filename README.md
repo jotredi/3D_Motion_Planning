@@ -109,13 +109,35 @@ Here's an example of a potential field generated in a local portion of the map:
 
 <img src="./misc/field.png" height=500>
 
-## Implementation
+In this example, the red dot represents the goal location.
 
-Every presented algorithm has its advantages and disadvantages but usually accuracy and time complexity are the main ones and we should find a trade off between them to be able to perform motion planning in real time and react to uncertainties like new obstacles or other flying objects/vehicles.
+## Receding Horizon Planning
+
+Every presented algorithm has its advantages and disadvantages but usually accuracy and time complexity are the main ones and we should find a trade off between them to be able to perform motion planning in real time and react to uncertainties like new obstacles, wind or other flying objects/vehicles.
 
 Ideally, we would like to have a global path to follow that could be represented as a graph or a low resolution grid, and then maintain a local high resolution map to be able to replan over the global trajectory and avoid obstacles.
 
 This local planner could be a high resolution 3D grid centered on the vehicle where the goal is the cell that is nearest to the next waypoint or a potential field centered on the next waypoint.
+
+In the following picture we can see an example of a high resolution grid discretized in 1m^3 voxels:
+
+<img src="./misc/receding_horizon.png" height=555>
+
+Concretely, the obstacles (voxels) in the above map represent trees from this environment: 
+
+<img src="./misc/in_the_trees.png" height=444>
+
+This way, we can have a really accurate representation of the environment and finetune the original global path as we follow the waypoints.
+
+## Implementation
+
+In my final implementation, I plan a global path from the starting position to a goal location using a low resolution grid discretized in 10m^3 voxels, so this will lead in a fast computation of a global plan due to the small amount of cells that have to be searched.
+
+Then, I continously replan using a 3D 40x40x10 m volume around the current location and calculate a path inside this high resolution grid setting the goal as a limit node in the direction of the next waypoint.
+
+In real world planning, we plan a local trajectory starting from the last calculated trajectory. This is done because there is a delay between the calculation of a trajectory and the actual execution of the trajectory as well as to be able to obtain a smooth transition between one trajectory and the next one.
+
+In my code, I maintain 5 local waypoints for the drone to follow so the receding horizon trajectory is calculated from the last calculated waypoint. The higher the number of local waypoints that we consider, the less we will react to changes in the environment. 
 
 ## Reference
 
