@@ -4,6 +4,15 @@
 
 The goal of this project is to plan and execute a trajectory through a 3D complex urban environment.
 
+## Table of Contents
+* [Environment](#environment)
+* [Grid Search](#grid-search)
+* [Graphs](#graphs)
+* [Potential Field](#potential-field)
+* [Receding Horizon Planning](#receding-horizon-planning)
+* [Implementation](#implementation)
+* [Reference](#reference)
+
 ## Environment
 
 The drone is situated in the middle of a map which represents downtown San Francisco. The drone should take off, plan a trajectory from its current position to a goal position in the map and execute the trajectory avoiding obstacles. This is known as the motion planning problem.
@@ -138,6 +147,8 @@ Then, I continously replan using a 3D 40x40x10 m volume around the current locat
 In real world planning, we plan a local trajectory starting from the last calculated trajectory. This is done because there is a delay between the calculation of a trajectory and the actual execution of the trajectory as well as to be able to obtain a smooth transition between one trajectory and the next one.
 
 In my code, I maintain 5 local waypoints for the drone to follow so the receding horizon trajectory is calculated from the last calculated waypoint. The higher the number of local waypoints that we consider, the less we will react to changes in the environment. 
+
+[This video](./misc/vid.mp4) shows how the drone follows an inaccurate global path succesfully avoiding obstacles thanks to the continuous replanning from the local high resolution grid.
 
 ## Reference
 
