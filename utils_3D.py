@@ -50,6 +50,7 @@ def create_voxmap(data, target_altitude, safety_distance, voxel_size=5):
 
     return voxmap, int(north_min), int(east_min)
 
+
 ### 3D A*
 class Action3D(Enum):
     """

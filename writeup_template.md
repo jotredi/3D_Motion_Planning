@@ -27,56 +27,50 @@ You're reading it! Below I describe how I addressed each rubric point and where 
 ### Explain the Starter Code
 
 #### 1. Explain the functionality of what's provided in `motion_planning.py` and `planning_utils.py`
-These scripts contain a basic planning implementation that includes...
+These scripts contain a basic planning implementation which consists of creating a 2D grid representation of the environment and searching it using A* from a starting position defined as the current location and a goal position in the grid.
 
-And here's a lovely image of my results (ok this image has nothing to do with it, but it's a nice example of how to include images in your writeup!)
-![Top Down View](./misc/high_up.png)
+`planning_utils.py` contains `create_grid()` for creating the 2D configuration space and `a_star()` for searching a path using basic movements in a grid.
 
-Here's | A | Snappy | Table
---- | --- | --- | ---
-1 | `highlight` | **bold** | 7.41
-2 | a | b | c
-3 | *italic* | text | 403
-4 | 2 | 3 | abcd
+`motion_planning.py` plans a path in the `plan_path()` method and executes it sending the waypoints to the drone as well as changing between states.
 
 ### Implementing Your Path Planning Algorithm
 
 #### 1. Set your global home position
-Here students should read the first line of the csv file, extract lat0 and lon0 as floating point values and use the self.set_home_position() method to set global home. Explain briefly how you accomplished this in your code.
 
-
-And here is a lovely picture of our downtown San Francisco environment from above!
-![Map of SF](./misc/map.png)
+The first step in `plan_path()` is read lat0 and lon0 from the first row of `colliders.csv` which represent the latitude and longitude values of the map center position. Then, the home position of the drone is defined as these values and 0 altitude.
 
 #### 2. Set your current local position
-Here as long as you successfully determine your local position relative to global home you'll be all set. Explain briefly how you accomplished this in your code.
 
-
-Meanwhile, here's a picture of me flying through the trees!
-![Forest Flying](./misc/in_the_trees.png)
+For setting the current local position of the drone, we just need to transform the global position into local position using `global_to_local()` (line 172 in `motion_planning.py`)
 
 #### 3. Set grid start position from local position
-This is another step in adding flexibility to the start location. As long as it works you're good to go!
+
+The grid start position is defined as the local position of the drone inside the grid (line 197)
 
 #### 4. Set grid goal position from geodetic coords
-This step is to add flexibility to the desired goal location. Should be able to choose any (lat, lon) within the map and have it rendered to a goal location on the grid.
+
+I set the goal position as a random location inside the grid that doesn't collide with any obstacles (lines - )
 
 #### 5. Modify A* to include diagonal motion (or replace A* altogether)
-Minimal requirement here is to modify the code in planning_utils() to update the A* implementation to include diagonal motions on the grid that have a cost of sqrt(2), but more creative solutions are welcome. Explain the code you used to accomplish this step.
 
-#### 6. Cull waypoints 
-For this step you can use a collinearity test or ray tracing method like Bresenham. The idea is simply to prune your path of unnecessary waypoints. Explain the code you used to accomplish this step.
+I have modified the code in `planning_utils.py` to account for diagonal motions with a cost of sqrt(2) in the A* implementation.
 
+I have also added an implementation of A* for graphs in `graph_utils.py` and 3D A* for searching a path in a 3D grid in `utils_3D.py`.
 
+In my final implementation, I define the environment as a 3D voxmap centered at the target altitude of the drone to be able to plan 3D paths. The resolution of this grid is 10m³ so this will allow a fast computation of a coarse global plan for the drone using 3D A*.
+
+##### Receding Horizon
+
+In order to fine tune the calculated path and be able to react to new obstacles or other uncertainties, I am continuously replanning a new path using a high resolution grid around the current position.
+
+This is done in `plan_local_path()` inside `motion_planning.py`. Here, I define a 40x40x10 m voxmap around the current position and I plan a path from there until the next global waypoint. For doing this, I set the goal location as a limit node inside the grid in the direction of the next waypoint (line 308).
+
+I maintain 5 local waypoints inside `self.local_waypoints` (line 72) and the drone follows these waypoints instead of the global waypoints. Using a higher number of local waypoints at each time will not account for many changes in the environment.
+
+#### 6. Cull waypoints
+
+Every time I generate a path, I use a collinearity check for removing unnecessary waypoints. This is implemented in `prune_path()` inside `planning_utils.py`.
 
 ### Execute the flight
-#### 1. Does it work?
-It works!
 
-### Double check that you've met specifications for each of the [rubric](https://review.udacity.com/#!/rubrics/1534/view) points.
-  
-# Extra Challenges: Real World Planning
-
-For an extra challenge, consider implementing some of the techniques described in the "Real World Planning" lesson. You could try implementing a vehicle model to take dynamic constraints into account, or implement a replanning method to invoke if you get off course or encounter unexpected obstacles.
-
-
+The drone is able to execute the flight from starting point to a random goal location.

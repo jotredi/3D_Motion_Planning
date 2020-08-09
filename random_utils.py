@@ -132,9 +132,13 @@ def can_connect(p1, p2, polygons, poly_tree):
     line = LineString([p1, p2])
     alt = np.min([p1[2], p2[2]])
 
-    for p in polygons:
-        poly = p[0]
-        height = p[1]
+    # Find closest polygons to this line
+    idxs = poly_tree.query([(p1[0],p1[1])], k=5, return_distance=False)[0]
+    idxs2 = poly_tree.query([(p2[0],p2[1])], k=5, return_distance=False)[0]
+
+    for i in np.concatenate((idxs, idxs2), axis=None):
+        poly = polygons[i][0]
+        height = polygons[i][1]
 
         if poly.crosses(line) and alt <= height:
             return False
