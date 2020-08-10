@@ -132,7 +132,7 @@ In the following picture we can see an example of a high resolution grid discret
 
 <img src="./misc/receding_horizon.png" height=555>
 
-Concretely, the obstacles (voxels) in the above map represent trees from this environment: 
+Concretely, the obstacles (voxels) in the above map represent trees from this environment:
 
 <img src="./misc/in_the_trees.png" height=444>
 
@@ -142,13 +142,13 @@ This way, we can have a really accurate representation of the environment and fi
 
 In my final implementation, I plan a global path from the starting position to a goal location using a low resolution grid discretized in 10m^3 voxels, so this will lead in a fast computation of a global plan due to the small amount of cells that have to be searched.
 
-Then, I continously replan using a 3D 40x40x10 m volume around the current location and calculate a path inside this high resolution grid setting the goal as a limit node in the direction of the next waypoint.
+Then, I continuously replan using a 3D 40x40x10 m volume around the current location and calculate a path inside this high resolution grid setting the goal as a limit node in the direction of the next waypoint.
 
 In real world planning, we plan a local trajectory starting from the last calculated trajectory. This is done because there is a delay between the calculation of a trajectory and the actual execution of the trajectory as well as to be able to obtain a smooth transition between one trajectory and the next one.
 
-In my code, I maintain 5 local waypoints for the drone to follow so the receding horizon trajectory is calculated from the last calculated waypoint. The higher the number of local waypoints that we consider, the less we will react to changes in the environment. 
+In my code, I maintain 5 local waypoints for the drone to follow so the receding horizon trajectory is calculated from the last calculated waypoint. The higher the number of local waypoints that we consider, the less we will react to changes in the environment.
 
-[This video](./misc/vid.mp4) shows how the drone follows an inaccurate global path succesfully avoiding obstacles thanks to the continuous replanning from the local high resolution grid.
+[This video](./misc/vid.mp4) shows how the drone follows an inaccurate global path successfully avoiding obstacles thanks to the continuous replanning from the local high resolution grid.
 
 ## Reference
 

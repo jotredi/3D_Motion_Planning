@@ -56,23 +56,19 @@ class MotionPlanning(Drone):
             if -1.0 * self.local_position[2] > 0.95 * self.target_position[2]:
                 self.plan_local_path()
                 self.waypoint_transition()
-                #self.waypoint_transition()
+
         elif self.flight_state == States.WAYPOINT:
             # Calculate velocity
             vel = np.sqrt(self.local_velocity[0]**2 + self.local_velocity[1]**2)
 
             if len(self.global_waypoints) and len(self.local_waypoints) < 5:
+                # Maintain 5 local waypoints
                 self.plan_local_path()
 
             # Deadband in terms of velocity
-            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < np.sqrt(2*vel):
+            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < np.sqrt(5*vel):
                 if len(self.local_waypoints):
                     self.waypoint_transition()
-                #if len(self.global_waypoints) > 0:
-                #    if len(self.local_waypoints) > 0:
-                #        self.waypoint_transition()
-                #    else:
-                #        self.plan_local_path()
                 else:
                     if np.linalg.norm(self.local_velocity[0:2]) < 1.0:
                         self.landing_transition()
@@ -82,10 +78,6 @@ class MotionPlanning(Drone):
             if self.global_position[2] - self.global_home[2] < 0.1:
                 if abs(self.local_position[2]) < 0.01:
                     self.disarming_transition()
-            # Transition to disarming if it has stop moving
-            # this considers landing on top of a building
-            #if self.local_velocity[2] < 0.001:
-            #    self.disarming_transition()
 
     def state_callback(self):
         if self.in_mission:
@@ -140,11 +132,6 @@ class MotionPlanning(Drone):
         data = msgpack.dumps(self.global_waypoints)
         self.connection._master.write(data)
 
-    def send_local_waypoints(self):
-        print("Sending local waypoints to simulator ...")
-        data = msgpack.dumps(self.local_waypoints)
-        self.connection._master.write(data)
-
     def plan_path(self):
         self.flight_state = States.PLANNING
         print("Searching for a path ...")
@@ -182,7 +169,7 @@ class MotionPlanning(Drone):
         # and with a resolution of:
         VOXMAP_RES = 10
         voxmap, north_offset, east_offset = create_voxmap(data, TARGET_ALTITUDE, SAFETY_DISTANCE, VOXMAP_RES)
-        # Create a 1m3 resolution voxmap
+        # Create a 1m3 resolution voxmap (for local planning)
         self.voxmap, self.north_offset, self.east_offset = create_voxmap(data, TARGET_ALTITUDE, SAFETY_DISTANCE, 1)
 
         print("North offset = {0}, east offset = {1}".format(north_offset, east_offset))
@@ -200,19 +187,17 @@ class MotionPlanning(Drone):
             if voxmap[n_goal, e_goal, alt_goal] == 0:
                 break
 
-        #goal = global_to_local((-122.396585, 37.793520, TARGET_ALTITUDE), self.global_home)
+        # Voxmap goal
         voxmap_goal = (n_goal, e_goal, alt_goal)
 
         # Run A* to find a path from start to goal
 
-        #print('Local Start and Goal: ', grid_start, grid_goal)
         print('Voxmap Start and Goal: ', voxmap_start, voxmap_goal)
 
         # Grid Search
         #path, _ = a_star(grid, heuristic, grid_start, grid_goal)
         # Graph Search
         #path, _ = graph_a_star(G, heuristic, graph_start, graph_goal)
-
         # 3D A* Search
         path, _ = a_star_3D(voxmap, heuristic, voxmap_start, voxmap_goal)
 
@@ -233,7 +218,6 @@ class MotionPlanning(Drone):
             # Append waypoint
             waypoints.append([p[0] * VOXMAP_RES + north_offset, p[1] * VOXMAP_RES + east_offset, p[2] * VOXMAP_RES, heading])
 
-        #waypoints = [[p[0] * VOXMAP_RES + north_offset, p[1] * VOXMAP_RES + east_offset, p[2] * VOXMAP_RES, 0] for p in path]
         print("Waypoints: ", waypoints)
 
         # Set self.global_waypoints
@@ -287,6 +271,14 @@ class MotionPlanning(Drone):
         # 3D A* Search
         path, _ = a_star_3D(local_voxmap, heuristic, local_start, local_goal)
 
+        if (len(path) == 0):
+            # Go to the next waypoint if failed to find a path
+            del self.global_waypoints[0]
+            if len(self.global_waypoints):
+                self.plan_local_path()
+            else:
+                return
+
         # Prune path to minimize number of waypoints
         path = prune_path(path)
 
@@ -303,8 +295,6 @@ class MotionPlanning(Drone):
                 del self.global_waypoints[0]
 
         print("Waypoints: ", self.local_waypoints)
-        # Send waypoints to sim (this is just for visualization of waypoints)
-        #self.send_local_waypoints()
 
     def start(self):
         self.start_log("Logs", "NavLog.txt")
