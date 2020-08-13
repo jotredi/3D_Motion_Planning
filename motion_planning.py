@@ -62,7 +62,7 @@ class MotionPlanning(Drone):
             vel = np.sqrt(self.local_velocity[0]**2 + self.local_velocity[1]**2)
 
             if len(self.global_waypoints) and len(self.local_waypoints) < 5:
-                # Maintain 5 local waypoints
+                # Maintain 5 local waypoints to follow
                 self.plan_local_path()
 
             # Deadband in terms of velocity
@@ -191,7 +191,6 @@ class MotionPlanning(Drone):
         voxmap_goal = (n_goal, e_goal, alt_goal)
 
         # Run A* to find a path from start to goal
-
         print('Voxmap Start and Goal: ', voxmap_start, voxmap_goal)
 
         # Grid Search
